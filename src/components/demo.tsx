@@ -106,7 +106,7 @@ export default function DemoPage() {
       setBusinessName("")
     } catch (error) {
       console.error("Booking error:", error)
-     
+      toast.error("There was an error booking your demo. Please try again.")
     }
   }
 
