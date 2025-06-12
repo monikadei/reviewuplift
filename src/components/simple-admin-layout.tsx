@@ -25,6 +25,7 @@ export function SimpleAdminLayout({ children }: SimpleAdminLayoutProps) {
     { icon: BarChart2, label: "Analytics", href: "/components/admin/analytics" },
     { icon: Users, label: "Users", href: "/components/admin/users" },
     { icon: User, label: "Register", href: "/components/admin/register" },
+    { icon: User, label: "Settings", href: "/components/admin/settings" },
   ]
 
   const NavLinks = () => (

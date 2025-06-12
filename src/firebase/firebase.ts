@@ -58,3 +58,5 @@ export const signInWithGoogle = async () => {
     throw new Error("Email already exists. Please log in using email and password.");
   }
 };
+
+export { doc, getDoc, collection };

@@ -258,15 +258,22 @@ export default function AnalyticPage() {
         })
       }
 
-      // Calculate weekly stats
+      // Calculate weekly stats - FIXED THIS SECTION
       const weeklyStats = []
-      const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] // Changed order to match actual week
+      
+      // Get the current day of week (0 = Sunday, 1 = Monday, etc.)
+      const currentDayOfWeek = today.getDay()
+      
+      // Calculate dates for each day of the current week
       for (let i = 0; i < 7; i++) {
         const date = new Date(today)
-        date.setDate(date.getDate() - i)
-        const dayData = dateCounts[date.toISOString().split("T")[0]] || { count: 0, totalRating: 0 }
-        weeklyStats.unshift({
-          day: days[date.getDay()],
+        // Calculate the date for this day of week (current day - current day of week + i)
+        date.setDate(date.getDate() - currentDayOfWeek + i)
+        const dateKey = date.toISOString().split("T")[0]
+        const dayData = dateCounts[dateKey] || { count: 0, totalRating: 0 }
+        weeklyStats.push({
+          day: days[i], // Use the correct day name
           reviews: dayData.count,
           avgRating: dayData.count > 0 ? dayData.totalRating / dayData.count : 0,
         })
@@ -822,7 +829,7 @@ export default function AnalyticPage() {
                         <div className="flex items-center gap-2">
                           <Monitor className="h-5 w-5 text-blue-500" />
                           <span className="text-gray-700">Desktop</span>
-                        </div>
+                                                  </div>
                         <span className="font-bold text-blue-600">
                           <AnimatedNumber value={analyticsData.deviceStats.desktop} />
                         </span>
@@ -908,5 +915,5 @@ export default function AnalyticPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { getAuth, createUserWithEmailAndPassword, updatePassword } from "firebase/auth"
+import { getAuth, createUserWithEmailAndPassword, updatePassword, deleteUser } from "firebase/auth"
 
 interface User {
   uid: string;
@@ -66,6 +66,8 @@ export default function UsersPage() {
     password: "",
     confirmPassword: ""
   })
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -171,25 +173,39 @@ export default function UsersPage() {
     }
   }
 
-  const handleDeleteUser = async (userId: string) => {
+  const confirmDeleteUser = (user: User) => {
+    setUserToDelete(user)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return
+    
     try {
-      const userRef = doc(db, "users", userId)
-      await updateDoc(userRef, { 
-        status: "Deleted",
-        updatedAt: new Date()
-      })
+      // First delete the user from Firebase Authentication
+      const user = auth.currentUser;
+      if (user && user.uid === userToDelete.uid) {
+        await deleteUser(user);
+      }
+
+      // Then delete the user document from Firestore
+      const userRef = doc(db, "users", userToDelete.uid);
+      await deleteDoc(userRef);
       
       toast({
         title: "User Deleted",
-        description: "User has been marked as deleted.",
+        description: "User has been permanently deleted.",
       });
     } catch (error) {
-      console.error("Error deleting user:", error)
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
         description: "Failed to delete user.",
         variant: "destructive",
       });
+    } finally {
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
     }
   }
 
@@ -378,6 +394,32 @@ export default function UsersPage() {
   return (
     <SimpleAdminLayout>
       <div className="space-y-6 animate-fade-in">
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-gray-600">
+                Are you sure you want to delete user <span className="font-semibold">{userToDelete?.displayName}</span>? 
+                This action cannot be undone.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteUser}
+              >
+                Delete User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="animate-slide-down flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent">
@@ -388,9 +430,12 @@ export default function UsersPage() {
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-orange-600 hover:bg-orange-700" onClick={openAddDialog}>
-                <UserPlus className="h-4 w-4 mr-2" /> Add User
-              </Button>
+              <Button
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  onClick={openAddDialog}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" /> Add User
+                </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
@@ -468,7 +513,6 @@ export default function UsersPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Active">Active</SelectItem>
-                      {/* <SelectItem value="Pending">Pending</SelectItem> */}
                       <SelectItem value="Inactive">Inactive</SelectItem>
                       <SelectItem value="Deleted">Deleted</SelectItem>
                     </SelectContent>
@@ -480,7 +524,7 @@ export default function UsersPage() {
                   Cancel
                 </Button>
                 <Button 
-                  className="bg-orange-600 hover:bg-orange-700" 
+                  className="bg-blue-600 hover:bg-blue-700" 
                   onClick={handleSaveUser}
                   disabled={isSaving}
                 >
@@ -491,19 +535,18 @@ export default function UsersPage() {
           </Dialog>
         </div>
 
-        <Card className="border-orange-200 shadow-lg transition-all hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-orange-50 to-white rounded-t-lg">
-            <CardTitle className="text-xl font-bold text-orange-800">Business Users</CardTitle>
+        <Card className="border-blue-200 shadow-lg transition-all hover:shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-blue-50 to-white rounded-t-lg">
+            <CardTitle className="text-xl font-bold text-blue-800">Business Users</CardTitle>
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <Select onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px] border-orange-200">
+                  <SelectTrigger className="w-[180px] border-blue-200">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="Active">Active</SelectItem>
-                    {/* <SelectItem value="Pending">Pending</SelectItem> */}
                     <SelectItem value="Inactive">Inactive</SelectItem>
                     <SelectItem value="Deleted">Deleted</SelectItem>
                   </SelectContent>
@@ -511,157 +554,9 @@ export default function UsersPage() {
               </div>
               
               <div className="relative w-64">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-orange-400" />
-                <Input
-                  placeholder="Search users..."
-                  className="pl-8 border-orange-200 focus:ring-2 focus:ring-orange-300 focus:border-transparent transition-all"
-                  value={searchQuery}
-                  onChange={handleSearch}
-                />
-              </div>
-              
-              <Button 
-                variant="outline" 
-                size="icon"
-                className="border-orange-300 text-orange-600 hover:bg-orange-50"
-                onClick={handleRefresh}
-              >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-pulse flex space-x-4">
-                  <div className="rounded-full bg-orange-200 h-12 w-12"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-orange-200 rounded w-64"></div>
-                    <div className="h-4 bg-orange-200 rounded w-56"></div>
-                  </div>
-                </div>
-              </div>
-            ) : filteredBusinessUsers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-500 p-4 text-center">
-                <div className="bg-gray-100 p-4 rounded-full mb-4">
-                  <Search className="h-10 w-10 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium mb-1">No business users found</h3>
-                <p className="max-w-md">
-                  {searchQuery 
-                    ? "No users match your search. Try different keywords." 
-                    : "No business users registered yet."}
-                </p>
-              </div>
-            ) : (
-              <Table className="rounded-lg overflow-hidden">
-                <TableHeader className="bg-orange-50">
-                  <TableRow className="hover:bg-orange-50">
-                    <TableHead className="font-bold text-orange-800">Name</TableHead>
-                    <TableHead className="font-bold text-orange-800">Email</TableHead>
-                    <TableHead className="font-bold text-orange-800">Business</TableHead>
-                    <TableHead className="font-bold text-orange-800">Status</TableHead>
-                    <TableHead className="font-bold text-orange-800">Joined</TableHead>
-                    <TableHead className="font-bold text-orange-800 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <AnimatePresence>
-                    {filteredBusinessUsers.map((user) => (
-                      <motion.tr 
-                        key={user.uid}
-                        className="border-b border-orange-100 hover:bg-orange-50 transition-all duration-200"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <TableCell className="font-medium group">
-                          <span className="group-hover:text-orange-600 transition-colors">
-                            {user.displayName}
-                          </span>
-                        </TableCell>
-                        <TableCell className="group">
-                          <span className="group-hover:text-orange-500 transition-colors">
-                            {user.email}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {user.businessName ? (
-                            <Badge variant="outline" className="border-orange-200 text-orange-700 bg-orange-50">
-                              {user.businessName}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400 text-sm">N/A</span>
-                          )}
-                        </TableCell>
-                        
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger>
-                              <Badge 
-                                className={`${getStatusColor(user.status)} transition-all hover:scale-105 cursor-pointer`}
-                              >
-                                {user.status}
-                              </Badge>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Active")}>
-                                Active
-                              </DropdownMenuItem>
-                              {/* <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Pending")}>
-                                Pending
-                              </DropdownMenuItem> */}
-                              <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Inactive")}>
-                                Inactive
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Deleted")}>
-                                Deleted
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                        <TableCell className="text-gray-600">
-                          {format(user.createdAt, "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditDialog(user)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              
-                              <DropdownMenuItem onClick={() => handleDeleteUser(user.uid)}>
-                                <Trash2 className="mr-2 h-4 w-4 text-red-600" />
-                                <span className="text-red-600">Delete</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Admin Users Section */}
-        <Card className="border-blue-200 shadow-lg transition-all hover:shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-blue-50 to-white rounded-t-lg">
-            <CardTitle className="text-xl font-bold text-blue-800">Admin Users</CardTitle>
-            <div className="flex items-center space-x-3">
-              <div className="relative w-64">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-blue-400" />
                 <Input
-                  placeholder="Search admins..."
+                  placeholder="Search users..."
                   className="pl-8 border-blue-200 focus:ring-2 focus:ring-blue-300 focus:border-transparent transition-all"
                   value={searchQuery}
                   onChange={handleSearch}
@@ -689,24 +584,25 @@ export default function UsersPage() {
                   </div>
                 </div>
               </div>
-            ) : filteredAdminUsers.length === 0 ? (
+            ) : filteredBusinessUsers.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-gray-500 p-4 text-center">
                 <div className="bg-gray-100 p-4 rounded-full mb-4">
-                  <User className="h-10 w-10 text-gray-400" />
+                  <Search className="h-10 w-10 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium mb-1">No admin users found</h3>
+                <h3 className="text-lg font-medium mb-1">No business users found</h3>
                 <p className="max-w-md">
                   {searchQuery 
-                    ? "No admins match your search." 
-                    : "Add new admins using the 'Add User' button."}
+                    ? "No users match your search. Try different keywords." 
+                    : "No business users registered yet."}
                 </p>
               </div>
             ) : (
               <Table className="rounded-lg overflow-hidden">
                 <TableHeader className="bg-blue-50">
-                  <TableRow className="hover:bg-blue-50">
+                  <TableRow className="hover:bg-orange-50">
                     <TableHead className="font-bold text-blue-800">Name</TableHead>
                     <TableHead className="font-bold text-blue-800">Email</TableHead>
+                    <TableHead className="font-bold text-blue-800">Business</TableHead>
                     <TableHead className="font-bold text-blue-800">Status</TableHead>
                     <TableHead className="font-bold text-blue-800">Joined</TableHead>
                     <TableHead className="font-bold text-blue-800 text-right">Actions</TableHead>
@@ -714,7 +610,7 @@ export default function UsersPage() {
                 </TableHeader>
                 <TableBody>
                   <AnimatePresence>
-                    {filteredAdminUsers.map((user) => (
+                    {filteredBusinessUsers.map((user) => (
                       <motion.tr 
                         key={user.uid}
                         className="border-b border-blue-100 hover:bg-blue-50 transition-all duration-200"
@@ -733,6 +629,15 @@ export default function UsersPage() {
                             {user.email}
                           </span>
                         </TableCell>
+                        <TableCell>
+                          {user.businessName ? (
+                            <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                              {user.businessName}
+                            </Badge>
+                          ) : (
+                            <span className="text-gray-400 text-sm">N/A</span>
+                          )}
+                        </TableCell>
                         
                         <TableCell>
                           <DropdownMenu>
@@ -747,14 +652,11 @@ export default function UsersPage() {
                               <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Active")}>
                                 Active
                               </DropdownMenuItem>
-                              {/* <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Pending")}>
-                                Pending
-                              </DropdownMenuItem> */}
                               <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Inactive")}>
                                 Inactive
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Deleted")}>
-                                Deleted
+                              <DropdownMenuItem onClick={() => confirmDeleteUser(user)}>
+                                Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -775,7 +677,142 @@ export default function UsersPage() {
                                 Edit
                               </DropdownMenuItem>
                               
-                              <DropdownMenuItem onClick={() => handleDeleteUser(user.uid)}>
+                              <DropdownMenuItem onClick={() => confirmDeleteUser(user)}>
+                                <Trash2 className="mr-2 h-4 w-4 text-red-600" />
+                                <span className="text-red-600">Delete</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Admin Users Section */}
+        <Card className="border-purple-200 shadow-lg transition-all hover:shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-purple-50 to-white rounded-t-lg">
+            <CardTitle className="text-xl font-bold text-purple-800">Admin Users</CardTitle>
+            <div className="flex items-center space-x-3">
+              <div className="relative w-64">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-purple-400" />
+                <Input
+                  placeholder="Search admins..."
+                  className="pl-8 border-purple-200 focus:ring-2 focus:ring-purple-300 focus:border-transparent transition-all"
+                  value={searchQuery}
+                  onChange={handleSearch}
+                />
+              </div>
+              
+              <Button 
+                variant="outline" 
+                size="icon"
+                className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                onClick={handleRefresh}
+              >
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-pulse flex space-x-4">
+                  <div className="rounded-full bg-purple-200 h-12 w-12"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-purple-200 rounded w-64"></div>
+                    <div className="h-4 bg-purple-200 rounded w-56"></div>
+                  </div>
+                </div>
+              </div>
+            ) : filteredAdminUsers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500 p-4 text-center">
+                <div className="bg-gray-100 p-4 rounded-full mb-4">
+                  <User className="h-10 w-10 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium mb-1">No admin users found</h3>
+                <p className="max-w-md">
+                  {searchQuery 
+                    ? "No admins match your search." 
+                    : "Add new admins using the 'Add User' button."}
+                </p>
+              </div>
+            ) : (
+              <Table className="rounded-lg overflow-hidden">
+                <TableHeader className="bg-purple-50">
+                  <TableRow className="hover:bg-blue-50">
+                    <TableHead className="font-bold text-purple-800">Name</TableHead>
+                    <TableHead className="font-bold text-purple-800">Email</TableHead>
+                    <TableHead className="font-bold text-purple-800">Status</TableHead>
+                    <TableHead className="font-bold text-purple-800">Joined</TableHead>
+                    <TableHead className="font-bold text-purple-800 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <AnimatePresence>
+                    {filteredAdminUsers.map((user) => (
+                      <motion.tr 
+                        key={user.uid}
+                        className="border-b border-purple-100 hover:bg-purple-50 transition-all duration-200"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <TableCell className="font-medium group">
+                          <span className="group-hover:text-purple-600 transition-colors">
+                            {user.displayName}
+                          </span>
+                        </TableCell>
+                        <TableCell className="group">
+                          <span className="group-hover:text-purple-500 transition-colors">
+                            {user.email}
+                          </span>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger>
+                              <Badge 
+                                className={`${getStatusColor(user.status)} transition-all hover:scale-105 cursor-pointer`}
+                              >
+                                {user.status}
+                              </Badge>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Active")}>
+                                Active
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleStatusChange(user.uid, "Inactive")}>
+                                Inactive
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => confirmDeleteUser(user)}>
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                        <TableCell className="text-gray-600">
+                          {format(user.createdAt, "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuItem onClick={() => confirmDeleteUser(user)}>
                                 <Trash2 className="mr-2 h-4 w-4 text-red-600" />
                                 <span className="text-red-600">Delete</span>
                               </DropdownMenuItem>

@@ -32,6 +32,7 @@ import AdminRegistrationForm from "./components/admin/register/page";
 import BusinessDetailsPage from "./components/admin/business/[uid]";
 import SubscriptionPage from "./components/admin/subscriptions/[uid]";
 import AnalyticPage from "./components/business/analytics/analytics";
+import SettingsPage from "./components/admin/settings/page";
 
 function useScrollToHash() {
   const location = useLocation();
@@ -88,6 +89,7 @@ return (
         <Route path="/components/admin/users" element={<UsersPage />} />
         <Route path="/components/admin/register" element={<AdminRegistrationForm />} />
         <Route path="/components/admin/analytics" element={<AnalyticsPage />} />
+        <Route path ="/components/admin/settings" element={<SettingsPage />} />
         <Route path="/admin/businesses/:uid" element={<BusinessDetailsPage params={{ uid: "" }} />} />
         <Route path="/admin/subscriptions/:uid" element={<SubscriptionPage params={{ uid: "" }} />} />
         <Route path="/sidebar" element={<Sidebar />} />
