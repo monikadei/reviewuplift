@@ -6,7 +6,7 @@ import { Dialog, Transition } from "@headlessui/react"
 import { motion } from "framer-motion"
 import { collection, doc, setDoc } from "firebase/firestore"
 import { db } from "@/firebase/firebase"
-import { SimpleAdminLayout } from "@/components/simple-admin-layout"
+import Navbar from "./Navbar"
 
 const availableTimes = [
   "09:00 AM",
@@ -111,7 +111,8 @@ export default function DemoPage() {
   }
 
   return (
-    <SimpleAdminLayout>
+    <>
+      <Navbar />
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-amber-50">
         <motion.div
           initial={{ opacity: 0 }}
@@ -450,6 +451,6 @@ export default function DemoPage() {
           }
         `}</style>
       </div>
-    </SimpleAdminLayout>
+      </>
   )
 }

@@ -50,7 +50,7 @@ const PricingSection = () => {
   }, []);
 
   const handleContactClick = () => {
-    navigate("/contact");
+    navigate("/contact-page"); 
   };
 
   const plans = [

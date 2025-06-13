@@ -79,6 +79,8 @@ export default function Sidebar() {
       // Check subscription status
       let subscriptionEndDate: Date | null = null
       let planName = ""
+      let isSubscriptionActive = false
+
       if (userData.subscriptionEndDate?.toDate) {
         subscriptionEndDate = userData.subscriptionEndDate.toDate()
       } else if (userData.subscriptionEndDate?.seconds) {
@@ -89,7 +91,9 @@ export default function Sidebar() {
         planName = userData.subscriptionPlan
       }
 
-      if (userData.subscriptionActive && subscriptionEndDate) {
+      // Check if subscription is active
+      if (subscriptionEndDate && subscriptionEndDate > now) {
+        isSubscriptionActive = true
         const subDiffTime = subscriptionEndDate.getTime() - now.getTime()
         const subDiffDays = Math.ceil(subDiffTime / (1000 * 60 * 60 * 24))
 
@@ -110,16 +114,25 @@ export default function Sidebar() {
       }
 
       // Handle trial if no active subscription
-      if (trialEndDate && trialEndDate > now) {
-        const diffTime = trialEndDate.getTime() - now.getTime()
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      if (trialEndDate) {
+        if (trialEndDate > now) {
+          const diffTime = trialEndDate.getTime() - now.getTime()
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-        setTrialInfo({
-          daysLeft: diffDays,
-          isTrial: true,
-          trialEnded: false,
-          hasSubscription: false,
-        })
+          setTrialInfo({
+            daysLeft: diffDays,
+            isTrial: true,
+            trialEnded: false,
+            hasSubscription: false,
+          })
+        } else {
+          setTrialInfo({
+            daysLeft: 0,
+            isTrial: false,
+            trialEnded: true,
+            hasSubscription: false,
+          })
+        }
 
         setSubscription({
           planName: "",
@@ -218,6 +231,11 @@ export default function Sidebar() {
     return () => unsubscribe()
   }, [location.pathname, checkUserStatus, businessLinks])
 
+  // Check if user has access (either active subscription or in trial period)
+  const hasAccess = useMemo(() => {
+    return subscription.isActive || (trialInfo.isTrial && !trialInfo.trialEnded)
+  }, [subscription.isActive, trialInfo.isTrial, trialInfo.trialEnded])
+
   const SidebarContent = useCallback(() => {
     const pathname = location.pathname
     const isSettingsItem = businessLinks.find((link) => link.name === "Settings")?.name === "Settings"
@@ -231,8 +249,8 @@ export default function Sidebar() {
               const isActive = pathname === link.href || (link.name === "Settings" && isSettingsActive(pathname))
               const hasSubLinks = !!link.subLinks
 
-              // Disable links if trial has ended and no subscription
-              const isDisabled = trialInfo.trialEnded && !subscription.isActive && link.name !== "Settings"
+              // Disable links if no access (except settings)
+              const isDisabled = !hasAccess && link.name !== "Settings"
 
               return (
                 <div key={link.name} className="space-y-1">
@@ -275,15 +293,11 @@ export default function Sidebar() {
                           "group w-full flex items-center justify-between rounded-lg px-4 py-3 text-base font-medium transition-all duration-300 ease-in-out",
                           isActive
                             ? "bg-orange-500 text-white shadow-md"
-                            : isDisabled
-                              ? "opacity-50 cursor-not-allowed"
-                              : "hover:bg-orange-100 hover:text-orange-800",
+                            : "hover:bg-orange-100 hover:text-orange-800",
                         )}
                         onClick={() => {
-                          if (isDisabled) return
                           isSettingsItem ? setSettingsOpen(!settingsOpen) : null
                         }}
-                        disabled={isDisabled}
                       >
                         <div className="flex items-center gap-4">
                           <link.icon className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
@@ -365,10 +379,12 @@ export default function Sidebar() {
           )}
 
           {/* Trial Ended Warning */}
-          {trialInfo.trialEnded && !subscription.isActive && (
+          {!hasAccess && !subscription.isActive && (
             <Alert className="bg-red-100 border-red-300">
               <AlertTriangle className="h-4 w-4 text-red-600" />
-              <AlertTitle className="text-red-800">Trial Expired</AlertTitle>
+              <AlertTitle className="text-red-800">
+                {trialInfo.trialEnded ? "Trial Expired" : "No Active Plan"}
+              </AlertTitle>
               <AlertDescription className="text-red-700">
                 Please upgrade to continue using the service.
               </AlertDescription>
@@ -399,6 +415,7 @@ export default function Sidebar() {
     subscription,
     userPlan,
     shouldKeepSettingsOpen,
+    hasAccess,
   ])
 
   // Don't render until mounted and data is loaded

@@ -4,8 +4,10 @@ import { SimpleAdminLayout } from "@/components/simple-admin-layout"
 import { Users, Star, MessageSquare, Building2, Badge, TrendingUp, Activity } from "lucide-react"
 import { motion } from "framer-motion"
 import { useEffect, useState, useCallback } from "react"
-import { collection, getDocs, query, where } from "firebase/firestore"
-import { db } from "@/firebase/firebase"
+import { collection, getDocs, query, where, doc } from "firebase/firestore"
+import { db, auth } from "@/firebase/firebase"
+import { onAuthStateChanged } from "firebase/auth"
+import { useNavigate } from "react-router-dom"
 
 interface BusinessUser {
   uid: string
@@ -31,49 +33,44 @@ export default function AdminDashboard() {
 
   const [recentLogins, setRecentLogins] = useState<BusinessUser[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const navigate = useNavigate()
 
-  // Animation variants
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid))
+          if (userDoc.exists() && userDoc.data()?.role === "admin") {
+            setIsAdmin(true)
+            fetchData()
+          } else {
+            navigate("/login")
+          }
+        } catch (error) {
+          console.error("Error checking admin status:", error)
+          navigate("/login")
+        }
+      } else {
+        navigate("/login")
+      }
+      setAuthLoading(false)
+    })
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-  }
+    return () => unsubscribe()
+  }, [navigate])
 
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return "Just now"
-    if (diffMins < 60) return `${diffMins} min ago`
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`
-    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`
-  }
-
-  // Memoized fetch function
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
 
-      // Fetch all users in parallel with business users
       const usersCollection = collection(db, "users")
       const [allUsersSnapshot, businessUsersSnapshot] = await Promise.all([
         getDocs(usersCollection),
         getDocs(query(usersCollection, where("role", "==", "BUSER"))),
       ])
 
-      // Process all users
       const allUsers: BusinessUser[] = allUsersSnapshot.docs.map((userDoc) => {
         const userData = userDoc.data()
         return {
@@ -87,7 +84,6 @@ export default function AdminDashboard() {
         }
       })
 
-      // Process business users
       const businessUsers: BusinessUser[] = businessUsersSnapshot.docs.map((userDoc) => {
         const userData = userDoc.data()
         return {
@@ -101,7 +97,6 @@ export default function AdminDashboard() {
         }
       })
 
-      // Fetch all reviews for business users in parallel
       const reviewPromises = businessUsers.map(async (user) => {
         const reviewsCollection = collection(db, "users", user.uid, "reviews")
         const reviewsSnapshot = await getDocs(reviewsCollection)
@@ -114,7 +109,6 @@ export default function AdminDashboard() {
 
       const reviewsData = await Promise.all(reviewPromises)
 
-      // Calculate review statistics
       let totalRating = 0
       let reviewCount = 0
 
@@ -123,10 +117,8 @@ export default function AdminDashboard() {
         totalRating += reviews.reduce((sum, review) => sum + (review.rating || 0), 0)
       })
 
-      // Calculate stats
       const averageRating = reviewCount > 0 ? Number.parseFloat((totalRating / reviewCount).toFixed(1)) : 0
 
-      // Sort by most recent
       const sortedUsers = [...businessUsers].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5)
 
       setStats({
@@ -144,17 +136,49 @@ export default function AdminDashboard() {
     }
   }, [])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return "Just now"
+    if (diffMins < 60) return `${diffMins} min ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`
+    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`
+  }
+
+  if (authLoading) {
+    return (
+      <SimpleAdminLayout>
+        <div className="flex justify-center items-center h-screen bg-gray-50">
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-slate-200 border-t-4 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-4 border-r-purple-600 rounded-full animate-spin animation-delay-150"></div>
+            </div>
+            <p className="mt-4 text-gray-600">Verifying access...</p>
+          </div>
+        </div>
+      </SimpleAdminLayout>
+    )
+  }
+
+  if (!isAdmin) {
+    return null // Redirect is handled in useEffect
+  }
 
   if (loading) {
     return (
       <SimpleAdminLayout>
-        <div className="flex justify-center items-center h-screen">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-slate-200 border-t-4 border-t-blue-600 rounded-full animate-spin"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-4 border-r-purple-600 rounded-full animate-spin animation-delay-150"></div>
+        <div className="flex justify-center items-center h-screen bg-gray-50">
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-slate-200 border-t-4 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-4 border-r-purple-600 rounded-full animate-spin animation-delay-150"></div>
+            </div>
+            <p className="mt-4 text-gray-600">Loading dashboard data...</p>
           </div>
         </div>
       </SimpleAdminLayout>
@@ -199,6 +223,21 @@ export default function AdminDashboard() {
       change: "+15%",
     },
   ]
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  }
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  }
 
   return (
     <SimpleAdminLayout>

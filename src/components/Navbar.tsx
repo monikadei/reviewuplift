@@ -98,7 +98,7 @@ const Navbar = () => {
           <div className="flex justify-between h-16 items-center">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="flex items-center">
-                <span className="text-orange-600 font-extrabold text-xl">ReviewUplift</span>
+                <span className="text-orange-600 font-extrabold text-xl">Review Rhino</span>
               </Link>
             </div>
             <div className="hidden md:flex items-center space-x-4">
@@ -130,7 +130,7 @@ const Navbar = () => {
         <div className="flex justify-between h-16 items-center">
           <div className="flex-shrink-0 flex items-center">
             <Link to="/" className="flex items-center">
-              <span className="text-orange-600 font-extrabold text-xl">ReviewUplift</span>
+              <span className="text-orange-600 font-extrabold text-xl">Review Rhino</span>
             </Link>
           </div>
 

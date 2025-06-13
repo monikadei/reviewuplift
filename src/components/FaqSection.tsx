@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -10,59 +9,46 @@ import { ChevronDown } from "lucide-react";
 const FaqSection = () => {
   const faqs = [
     {
-      question: "How does ReviewUplift collect reviews?",
+      question: "How does Review Rhino help monitor my reviews?",
       answer:
-        "ReviewUplift sends automated email and SMS requests to your customers asking them to leave a review. You can customize the timing, frequency, and template of these requests to maximize your review collection efforts.",
+        "Review Rhino provides a centralized dashboard where you can track all your customer reviews from multiple platforms in one place. Get real-time notifications when new reviews are posted.",
     },
     {
-      question: "Which review platforms do you support?",
+      question: "Which review platforms can I monitor?",
       answer:
-        "We support all major review platforms including Google, Facebook, Yelp, TripAdvisor, and 100+ industry-specific sites. You can connect all your profiles and monitor them in one dashboard.",
+        "Our dashboard supports all major review platforms including Google, Facebook, Yelp, TripAdvisor, and many industry-specific sites. You can connect all your business profiles for comprehensive monitoring.",
     },
     {
-      question: "Can I respond to reviews from ReviewUplift?",
+      question: "Can I respond to reviews from the dashboard?",
       answer:
-        "Yes, you can respond to all reviews from our platform. We also provide AI-powered response suggestions to help you craft the perfect response to both positive and negative reviews.",
+        "Yes, you can view and respond to all your reviews directly from our platform. We provide tools to help you manage your responses efficiently.",
     },
     {
       question: "How do I display reviews on my website?",
       answer:
-        "ReviewUplift offers customizable widgets that you can embed on your website to showcase your best reviews. You can filter by rating, platform, and more to display only the reviews you want.",
+        "Review Rhino offers simple widgets that you can easily embed on your website to showcase your best reviews. Customize which reviews to display based on rating or platform.",
     },
     {
-      question: "Do you have a mobile app?",
+      question: "Do you offer analytics for my reviews?",
       answer:
-        "Yes, we have mobile apps for both iOS and Android so you can manage your reviews on the go. You'll receive real-time notifications when you get new reviews and can respond directly from the app.",
+        "Yes, our dashboard provides analytics to track your review trends over time, including average ratings, response rates, and platform comparisons.",
     },
     {
-      question: "How long is the free trial?",
+      question: "How long does it take to set up?",
       answer:
-        "We offer a 14-day free trial for all paid plans. No credit card is required to start your trial, and you can cancel anytime.",
+        "Setup is quick and simple. Just connect your business profiles and you'll start seeing your reviews in the dashboard immediately.",
     },
     {
-      question: "Can I use ReviewUplift for multiple locations?",
+      question: "Can I use this for multiple business locations?",
       answer:
-        "Yes, ReviewUplift supports multi-location businesses. Our Professional plan includes up to 3 locations, and our Enterprise plan offers unlimited locations with centralized management.",
+        "Yes, Review Rhino supports multi-location businesses. You can monitor all locations from a single dashboard with location-specific analytics.",
     },
     {
-      question: "Is there a limit to how many review requests I can send?",
+      question: "Is there a mobile app available?",
       answer:
-        "Each plan has a monthly limit of review requests you can send. The Starter plan includes 100 requests/month, the Professional plan includes 500 requests/month, and the Enterprise plan offers unlimited requests.",
+        "Yes, we offer mobile apps for iOS and Android so you can monitor and respond to reviews on the go with real-time notifications.",
     },
   ];
-
-  const [typedText, setTypedText] = useState("");
-  const fullText = "Freequently Asked Questions";
-
-  useEffect(() => {
-    let index = 0;
-    const timer = setInterval(() => {
-      setTypedText((prev) => prev + fullText.charAt(index));
-      index++;
-      if (index === fullText.length) clearInterval(timer);
-    }, 100); // typing speed
-    return () => clearInterval(timer);
-  }, []);
 
   return (
     <section id="faq" className="py-20 bg-white font-sans">
@@ -71,11 +57,11 @@ const FaqSection = () => {
           {/* Left Column */}
           <div className="text-left">
             <p className="text-sm text-orange-600 font-semibold uppercase tracking-wider">FAQ</p>
-            <h2 className="mt-2 text-4xl font-extrabold text-gray-900 block h-20">
-              <span className="typewriter text-orange-600">{typedText}</span>
+            <h2 className="mt-2 text-4xl font-extrabold text-gray-900">
+              Frequently Asked Questions
             </h2>
             <p className="mt-4 text-lg text-gray-500 max-w-md">
-              Get answers to the most common questions about ReviewUplift.
+              Get answers to the most common questions about Review Rhino.
             </p>
           </div>
 
@@ -142,24 +128,6 @@ const FaqSection = () => {
           100% {
             opacity: 1;
             transform: translateY(0);
-          }
-        }
-
-        .typewriter {
-          font-size: 2.25rem; /* 36px */
-          font-weight: 800;
-          white-space: nowrap;
-          overflow: hidden;
-          border-right: 0.15em solid orange;
-          animation: blink-caret 0.75s step-end infinite;
-        }
-
-        @keyframes blink-caret {
-          from, to {
-            border-color: transparent;
-          }
-          50% {
-            border-color: orange;
           }
         }
       `}</style>

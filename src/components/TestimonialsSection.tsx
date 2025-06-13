@@ -11,7 +11,7 @@ const TestimonialsSection = () => {
       name: "Sarah Johnson",
       role: "Owner, The Beauty Spa",
       content:
-        "ReviewUplift has completely transformed our customer feedback process. We've seen a 230% increase in positive reviews within just three months of using the platform.",
+        "Review Rhino has completely transformed our customer feedback process. We've seen a 230% increase in positive reviews within just three months of using the platform.",
       image: "/placeholder.svg",
       stars: 5,
     },
@@ -19,7 +19,7 @@ const TestimonialsSection = () => {
       name: "Michael Chen",
       role: "Director, Chen's Restaurant Group",
       content:
-        "Managing reviews across our 5 restaurant locations used to be a nightmare. Now with ReviewUplift, we can monitor and respond to all reviews from one dashboard. Our overall rating has increased from 3.8 to 4.6!",
+        "Managing reviews across our 5 restaurant locations used to be a nightmare. Now with Review Rhino, we can monitor and respond to all reviews from one dashboard. Our overall rating has increased from 3.8 to 4.6!",
       image: "/placeholder.svg",
       stars: 5,
     },
@@ -59,7 +59,7 @@ const TestimonialsSection = () => {
             What our customers are saying
           </h2>
           <p className="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
-            Join thousands of businesses that have improved their online reputation with ReviewUplift.
+            Join thousands of businesses that have improved their online reputation with Review Rhino.
           </p>
         </div>
 
@@ -123,7 +123,7 @@ const TestimonialsSection = () => {
               Ready to boost your online reputation?
             </h3>
             <p className="mt-4 text-gray-600 max-w-3xl mx-auto">
-              Join thousands of businesses that use ReviewUplift to collect, manage and showcase their customer reviews.
+              Join thousands of businesses that use Review Rhino to collect, manage and showcase their customer reviews.
             </p>
             <Link to="/payment">
             <Button className="mt-8 bg-orange-600 hover:bg-orange-700 px-8 py-3 text-lg">

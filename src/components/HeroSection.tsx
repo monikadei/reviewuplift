@@ -81,7 +81,7 @@ const HeroSection = () => {
                 </div>
               </div>
               <p className="text-gray-700">
-                "ReviewUplift has completely transformed our customer feedback process. Our positive reviews have increased by 230% in just three months!"
+                "Review Rhino has completely transformed our customer feedback process. Our positive reviews have increased by 230% in just three months!"
               </p>
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-sm text-gray-500">Small Business Owner</p>

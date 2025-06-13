@@ -8,7 +8,7 @@ const StatsSection = () => {
             Trusted by businesses worldwide
           </h2>
           <p className="mt-3 text-xl text-orange-200 sm:mt-4">
-            Join thousands of businesses that use ReviewUplift to manage their online reputation
+            Join thousands of businesses that use Review Rhino to manage their online reputation
           </p>
         </div>
         <dl className="mt-10 text-center sm:max-w-3xl sm:mx-auto sm:grid sm:grid-cols-3 sm:gap-8">

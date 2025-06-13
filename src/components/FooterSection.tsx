@@ -6,10 +6,10 @@ const FooterSection = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
           <div className="col-span-2">
             <div className="flex items-center">
-              <span className="text-white font-extrabold text-xl">ReviewUplift</span>
+              <span className="text-white font-extrabold text-xl">Review Rhino</span>
             </div>
             <p className="mt-4 text-gray-300 text-sm">
-              ReviewUplift helps businesses collect, manage and showcase their customer reviews to improve their online reputation and attract more customers.
+              Review Rhino helps businesses collect, manage and showcase their customer reviews to improve their online reputation and attract more customers.
             </p>
             <div className="mt-6 flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white">
@@ -102,7 +102,7 @@ const FooterSection = () => {
             <a href="#" className="text-gray-400 hover:text-white text-sm">Cookie Policy</a>
           </div>
           <p className="mt-8 md:mt-0 text-base text-gray-400 md:order-1">
-            &copy; {new Date().getFullYear()} ReviewUplift. All rights reserved.
+            &copy; {new Date().getFullYear()} Review Rhino. All rights reserved.
           </p>
         </div>
       </div>

@@ -2,13 +2,13 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { BarChart3, Star, LinkIcon, MessageSquare, TrendingUp } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Sidebar from "../../sidebar"
 import { auth, db } from "@/firebase/firebase"
-import { doc, getDoc, collection, query, getDocs } from "firebase/firestore"
+import { doc, getDoc, collection, query, getDocs, where } from "firebase/firestore"
 import { onAuthStateChanged } from "firebase/auth"
 import { useNavigate } from "react-router-dom"
 
@@ -21,6 +21,13 @@ interface Review {
   status: string
   branchname: string
   replied: boolean
+}
+
+interface BusinessInfo {
+  businessName: string
+  linkClicks: number
+  responseRate: number
+  createdAt: { seconds: number }
 }
 
 const useSubscriptionStatus = () => {
@@ -61,21 +68,78 @@ const useSubscriptionStatus = () => {
 
 export default function BusinessDashboard() {
   const [period, setPeriod] = useState("week")
-  const [businessName, setBusinessName] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [reviews, setReviews] = useState<Review[]>([])
-  const [stats, setStats] = useState({
-    totalReviews: 0,
-    averageRating: 0,
+  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>({
+    businessName: "",
     linkClicks: 0,
     responseRate: 0,
-    ratingDistribution: [0, 0, 0, 0, 0],
+    createdAt: { seconds: 0 }
   })
-
+  const [loading, setLoading] = useState(true)
+  const [allReviews, setAllReviews] = useState<Review[]>([])
   const navigate = useNavigate()
 
   // Check subscription status on component mount
   useSubscriptionStatus()
+
+  // Calculate period-based stats
+  const { filteredReviews, stats } = useMemo(() => {
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (period) {
+      case "day":
+        startDate.setDate(now.getDate() - 1);
+        break;
+      case "week":
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case "month":
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case "year":
+        startDate.setDate(now.getDate() - 365);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 7);
+    }
+
+    const startTimestamp = Math.floor(startDate.getTime() / 1000);
+    
+    // Filter reviews based on selected period
+    const filtered = allReviews.filter(review => 
+      review.createdAt.seconds >= startTimestamp
+    );
+    
+    // Calculate stats
+    let totalRating = 0;
+    const ratingCounts = [0, 0, 0, 0, 0]; // [5-star, 4-star, 3-star, 2-star, 1-star]
+    let repliedCount = 0;
+
+    filtered.forEach(review => {
+      totalRating += review.rating;
+      if (review.rating >= 1 && review.rating <= 5) {
+        ratingCounts[5 - review.rating]++;
+      }
+      if (review.replied) {
+        repliedCount++;
+      }
+    });
+
+    const totalReviews = filtered.length;
+    const averageRating = totalReviews > 0 ? Number.parseFloat((totalRating / totalReviews).toFixed(1)) : 0;
+    const responseRate = totalReviews > 0 ? Math.round((repliedCount / totalReviews) * 100) : 0;
+
+    return {
+      filteredReviews: filtered.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds),
+      stats: {
+        totalReviews,
+        averageRating,
+        linkClicks: businessInfo.linkClicks,
+        responseRate,
+        ratingDistribution: ratingCounts
+      }
+    };
+  }, [allReviews, period, businessInfo]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -91,22 +155,19 @@ export default function BusinessDashboard() {
 
           const userData = userDoc.data()
           const businessData = userData?.businessInfo || {}
-          setBusinessName(businessData.businessName || "")
-
-          // Get stats from businessInfo
-          setStats((prev) => ({
-            ...prev,
-            linkClicks: businessData.linkClicks || 0,
+          
+          // FIX: Get linkClicks from root user document, not businessInfo
+          setBusinessInfo({
+            businessName: businessData.businessName || "",
+            linkClicks: userData.linkClicks || 0, // Changed from businessData.linkClicks
             responseRate: businessData.responseRate || 0,
-          }))
+            createdAt: businessData.createdAt || { seconds: 0 }
+          })
 
           // Get reviews from subcollection
           const reviewsQuery = query(collection(db, "users", user.uid, "reviews"))
-
           const querySnapshot = await getDocs(reviewsQuery)
           const reviewsData: Review[] = []
-          let totalRating = 0
-          const ratingCounts = [0, 0, 0, 0, 0] // [5-star, 4-star, 3-star, 2-star, 1-star]
 
           querySnapshot.forEach((doc) => {
             const data = doc.data()
@@ -123,25 +184,9 @@ export default function BusinessDashboard() {
               branchname: data.branchname || "",
               replied: data.replied || false,
             })
-
-            // Update stats
-            totalRating += data.rating
-            if (data.rating >= 1 && data.rating <= 5) {
-              ratingCounts[5 - data.rating]++ // 5-star at index 0, 1-star at index 4
-            }
           })
 
-          const totalReviews = reviewsData.length
-          const averageRating = totalReviews > 0 ? Number.parseFloat((totalRating / totalReviews).toFixed(1)) : 0
-
-          setReviews(reviewsData.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds))
-
-          setStats((prev) => ({
-            ...prev,
-            totalReviews,
-            averageRating,
-            ratingDistribution: ratingCounts,
-          }))
+          setAllReviews(reviewsData)
         } catch (error) {
           console.error("Error fetching data:", error)
         } finally {
@@ -222,6 +267,14 @@ export default function BusinessDashboard() {
     )
   }
 
+  // Period labels for UI
+  const periodLabels: Record<string, string> = {
+    day: "Today",
+    week: "This Week",
+    month: "This Month",
+    year: "This Year"
+  }
+
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50">
       <Sidebar />
@@ -234,7 +287,7 @@ export default function BusinessDashboard() {
                 Dashboard
               </h1>
               <p className="text-gray-600 text-lg mt-2">
-                {businessName ? `Welcome back, ${businessName}` : "Welcome back"}
+                {businessInfo.businessName ? `Welcome back, ${businessInfo.businessName}` : "Welcome back"}
               </p>
             </div>
 
@@ -277,7 +330,7 @@ export default function BusinessDashboard() {
               title="Total Reviews"
               icon={<Star className="h-5 w-5 text-orange-500" />}
               value={stats.totalReviews}
-              description="All time reviews"
+              description={periodLabels[period]}
               gradient="from-blue-100 to-blue-200"
               textColor="text-blue-800"
               iconBg="bg-blue-100"
@@ -308,7 +361,7 @@ export default function BusinessDashboard() {
               title="Link Clicks"
               icon={<LinkIcon className="h-5 w-5 text-orange-500" />}
               value={stats.linkClicks}
-              description="Total review link clicks"
+              description="All time clicks"
               gradient="from-purple-100 to-purple-200"
               textColor="text-purple-800"
               iconBg="bg-purple-100"
@@ -318,7 +371,7 @@ export default function BusinessDashboard() {
               title="Response Rate"
               icon={<MessageSquare className="h-5 w-5 text-orange-500" />}
               value={`${stats.responseRate}%`}
-              description="Of reviews responded to"
+              description={periodLabels[period]}
               gradient="from-orange-100 to-orange-200"
               textColor="text-orange-800"
               iconBg="bg-orange-100"
@@ -341,15 +394,15 @@ export default function BusinessDashboard() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <TrendingUp className="h-4 w-4" />
-                    <span>{reviews.length} total</span>
+                    <span>{filteredReviews.length} {periodLabels[period].toLowerCase()}</span>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 {/* Scrollable Reviews Container */}
                 <div className="max-h-96 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-                  {reviews.length > 0 ? (
-                    reviews.slice(0, 10).map((review, index) => (
+                  {filteredReviews.length > 0 ? (
+                    filteredReviews.slice(0, 10).map((review, index) => (
                       <div
                         key={review.id}
                         className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all duration-300 bg-gradient-to-r from-gray-50 to-white animate-slide-up hover:scale-[1.02]"

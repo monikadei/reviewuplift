@@ -12,7 +12,7 @@ const CtaSection = () => {
               Ready to boost your online reputation?
             </h2>
             <p className="mt-4 text-lg text-orange-100 max-w-md">
-              Join thousands of businesses that use ReviewUplift to collect more positive reviews and improve their online reputation.
+              Join thousands of businesses that use Review Rhino to collect more positive reviews and improve their online reputation.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link to="/payment">
@@ -31,7 +31,7 @@ const CtaSection = () => {
             <div className="bg-white p-6 rounded-lg shadow-lg">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Sign up for our newsletter</h3>
               <p className="text-gray-600 mb-6">
-                Get the latest tips, industry news, and updates from ReviewUplift.
+                Get the latest tips, industry news, and updates from Review Rhino.
               </p>
               <form className="space-y-4">
                 <div>

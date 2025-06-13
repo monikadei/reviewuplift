@@ -33,6 +33,7 @@ import BusinessDetailsPage from "./components/admin/business/[uid]";
 import SubscriptionPage from "./components/admin/subscriptions/[uid]";
 import AnalyticPage from "./components/business/analytics/analytics";
 import SettingsPage from "./components/admin/settings/page";
+import ContactPage from "./components/ContactPage";
 
 function useScrollToHash() {
   const location = useLocation();
@@ -74,6 +75,7 @@ return (
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/admin" element={<BusinessForm />} />
         <Route path="/businessform" element={<BusinessForm />} />
+        <Route path="/contact-page" element={<ContactPage />} />
         <Route path="/components/business/dashboard" element={<BusinessDashboard />} />
         <Route path="/components/business/reviews" element={<BusinessReviews />} />
         <Route path="/components/business/review-link" element={<ReviewLinkPage />} />

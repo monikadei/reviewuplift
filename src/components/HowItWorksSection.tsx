@@ -68,10 +68,10 @@ const HowItWorksSection = () => {
             <div className="flex flex-col md:flex-row items-center">
               <div className="w-full md:w-1/2 pr-0 md:pr-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  See ReviewUplift in action
+                  See Review Rhino in action
                 </h3>
                 <p className="text-gray-500 mb-6">
-                  Schedule a personalized demo to see how ReviewUplift can help your business collect more reviews and improve your online reputation.
+                  Schedule a personalized demo to see how Review Rhino can help your business collect more reviews and improve your online reputation.
                 </p>
                 <Link to="/demo">
                   <button className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-md transition duration-300">

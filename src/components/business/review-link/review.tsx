@@ -8,6 +8,8 @@ import { db } from "@/firebase/firebase"
 import { collection, doc, serverTimestamp, getDoc, addDoc, getDocs } from "firebase/firestore"
 import { toast } from "sonner"
 import { motion, AnimatePresence } from "framer-motion"
+import { updateDoc, increment } from "firebase/firestore";
+
 
 interface ReviewFormData {
   name: string
@@ -33,7 +35,8 @@ interface Branch {
 }
 
 export default function ReviewPageFixed() {
-  const { businessSlug } = useParams()
+  const params = useParams()
+  const businessSlug = params.businessSlug as string
   const [businessName, setBusinessName] = useState("")
   const [previewText, setPreviewText] = useState("")
   const [previewImage, setPreviewImage] = useState<string | null>(null)
@@ -126,15 +129,31 @@ export default function ReviewPageFixed() {
         setGoogleReviewLink(matchedDoc.googleReviewLink || "")
 
         // Fetch branches from the user document
+   // ...existing code...
+        // Fetch branches from the user document
         if (matchedDoc) {
           const userDocRef = doc(db, "users", matchedDoc.id)
           const userDocSnap = await getDoc(userDocRef)
           if (userDocSnap.exists()) {
-            const userData = userDocSnap.data()
+            const userData = userDocSnap.data();
+
+            // 🔁 Count link click once per session
+            const clickKey = `linkClicked-${matchedDoc.id}`;
+            if (!sessionStorage.getItem(clickKey)) {
+              try {
+                await updateDoc(userDocRef, {
+                  linkClicks: increment(1),
+                });
+                sessionStorage.setItem(clickKey, "true");
+                console.log("✅ Link click counted");
+              } catch (error) {
+                console.error("❌ Failed to count link click", error);
+              }
+            }
 
             // Get business name from userData if available (to ensure it's up to date)
             const updatedBusinessName = userData.businessInfo?.businessName || matchedDoc.businessName || ""
-            if (updatedBusinessName && updatedBusinessName !== businessName) {
+ if (updatedBusinessName && updatedBusinessName !== businessName) {
               setBusinessName(updatedBusinessName)
             }
 
@@ -158,8 +177,6 @@ export default function ReviewPageFixed() {
             if (!googleReviewLink && userGoogleLink) {
               setGoogleReviewLink(userGoogleLink)
             }
-
-            setReviewLinkUrl(matchedDoc.reviewLinkUrl || "")
           }
         }
       } catch (error) {
@@ -197,6 +214,8 @@ export default function ReviewPageFixed() {
     return !Object.values(errors).some(Boolean)
   }
 
+
+  
   const validateGoogleForm = () => {
     const errors = {
       name: false, // Not required for Google reviews
@@ -222,6 +241,13 @@ export default function ReviewPageFixed() {
       email: "",
       branchname: "",
       review: "",
+    })
+    setFormErrors({
+      name: false,
+      phone: false,
+      email: false,
+      branchname: false,
+      review: false,
     })
   }
 
@@ -423,11 +449,12 @@ export default function ReviewPageFixed() {
   }
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden">
-      <div className="relative z-10 min-h-screen flex">
-        {/* Left Side - Image Background Section */}
+    <div className="min-h-screen bg-white relative overflow-hidden w-full">
+      {/* Mobile-first layout with flex-col for small screens */}
+      <div className="relative z-10 min-h-screen flex flex-col lg:flex-row">
+        {/* Left Side - Image Background Section (full width on mobile, half on desktop) */}
         <motion.div
-          className="w-full lg:w-1/2 relative overflow-hidden flex flex-col justify-center items-center p-4 lg:p-8"
+          className="w-full lg:w-1/2 h-72 lg:h-auto relative overflow-hidden flex flex-col justify-center items-center p-3 lg:p-8"
           style={{
             backgroundImage: previewImage ? `url(${previewImage})` : "none",
             backgroundSize: "cover",
@@ -444,8 +471,10 @@ export default function ReviewPageFixed() {
           {/* Fallback background if no image */}
           {!previewImage && (
             <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-gray-800 to-slate-900" />
-          )}
+          )
+          }
 
+          {/* Content inside the image section */}
           <div className="relative text-white text-center max-w-lg z-10">
             {!previewImage && (
               <motion.div
@@ -461,9 +490,9 @@ export default function ReviewPageFixed() {
                     animate={{ rotate: 360 }}
                     transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                   >
-                    <Mountain className="h-24 w-24 mx-auto text-white/80 mb-6" />
+                    <Mountain className="h-16 w-16 lg:h-24 lg:w-24 mx-auto text-white/80 mb-6" />
                   </motion.div>
-                  <h3 className="text-2xl font-bold text-white">{businessName || "Your Business"}</h3>
+                  <h3 className="text-xl lg:text-2xl font-bold text-white">{businessName || "Your Business"}</h3>
                 </div>
               </motion.div>
             )}
@@ -479,10 +508,10 @@ export default function ReviewPageFixed() {
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
                 >
-                  <Sparkles className="h-6 w-6 text-yellow-300" />
+                  <Sparkles className="h-5 w-5 lg:h-6 lg:w-6 text-yellow-300" />
                 </motion.div>
                 <h3
-                  className={`font-bold text-white ${isFormActive ? "text-2xl lg:text-3xl" : "text-4xl lg:text-5xl"} transition-all duration-300`}
+                  className={`font-bold text-white ${isFormActive ? "text-lg lg:text-3xl" : "text-xl lg:text-5xl"} transition-all duration-300`}
                 >
                   {welcomeTitle || "We value your opinion!"}
                 </h3>
@@ -490,11 +519,11 @@ export default function ReviewPageFixed() {
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, delay: 1 }}
                 >
-                  <Heart className="h-6 w-6 text-pink-300" />
+                  <Heart className="h-5 w-5 lg:h-6 lg:w-6 text-pink-300" />
                 </motion.div>
               </div>
               <p
-                className={`text-white/90 leading-relaxed transition-all duration-300 ${isFormActive ? "text-base lg:text-lg" : "text-lg lg:text-xl"}`}
+                className={`text-white/90 leading-relaxed transition-all duration-300 ${isFormActive ? "text-sm lg:text-lg" : "text-base lg:text-xl"}`}
               >
                 {welcomeText || "Share your experience and help us improve"}
               </p>
@@ -520,14 +549,14 @@ export default function ReviewPageFixed() {
           </div>
         </motion.div>
 
-        {/* Right Side - Responsive Form */}
+        {/* Right Side - Responsive Form (full width on mobile, half on desktop) */}
         <motion.div
-          className="w-full lg:w-1/2 bg-white flex flex-col relative min-h-screen overflow-y-auto"
+          className="w-full lg:w-1/2 bg-white flex flex-col relative lg:min-h-screen overflow-y-auto"
           initial={{ x: 100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.8 }}
         >
-          <div className="flex-1 flex flex-col justify-center w-full max-w-xl mx-auto p-4 lg:p-8">
+          <div className="flex-1 flex flex-col justify-center w-full max-w-xl mx-auto p-3 lg:p-8">
             <AnimatePresence mode="wait">
               {submitted ? (
                 <motion.div
@@ -539,20 +568,20 @@ export default function ReviewPageFixed() {
                   transition={{ duration: 0.5 }}
                 >
                   <motion.div
-                    className="w-20 h-20 mx-auto bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center mb-6"
+                    className="w-16 h-16 lg:w-20 lg:h-20 mx-auto bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center mb-6"
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                   >
-                    <Award className="h-10 w-10 text-white" />
+                    <Award className="h-8 w-8 lg:h-10 lg:w-10 text-white" />
                   </motion.div>
                   <motion.div
-                    className="p-6 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200"
+                    className="p-4 lg:p-6 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200"
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.3 }}
                   >
-                    <p className="text-gray-700 font-medium text-lg">{submissionMessage}</p>
+                    <p className="text-gray-700 font-medium text-base lg:text-lg">{submissionMessage}</p>
                   </motion.div>
                   <motion.button
                     onClick={resetForm}
@@ -578,7 +607,7 @@ export default function ReviewPageFixed() {
                   {/* Logo Display */}
                   {logoImage && (
                     <motion.div
-                      className="flex justify-center mb-6"
+                      className="flex justify-center mb-4 lg:mb-6"
                       initial={{ y: -20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.2 }}
@@ -586,7 +615,7 @@ export default function ReviewPageFixed() {
                       <img
                         src={logoImage || "/placeholder.svg"}
                         alt={`${businessName} Logo`}
-                        className="h-16 object-contain filter drop-shadow-lg"
+                        className="h-12 lg:h-16 object-contain filter drop-shadow-lg"
                         onError={(e) => {
                           console.error("Logo failed to load:", logoImage)
                           e.currentTarget.style.display = "none"
@@ -596,26 +625,26 @@ export default function ReviewPageFixed() {
                   )}
 
                   <motion.div
-                    className="text-center mb-8"
+                    className="text-center mb-6 lg:mb-8"
                     initial={{ y: -20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.3 }}
                   >
                     <h2
-                      className={`font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2 transition-all duration-300 ${isFormActive ? "text-2xl lg:text-3xl" : "text-3xl lg:text-4xl"}`}
+                      className={`font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2 transition-all duration-300 ${isFormActive ? "text-xl lg:text-3xl" : "text-2xl lg:text-4xl"}`}
                     >
                       Rate Your Experience
                     </h2>
                     <p
-                      className={`text-gray-600 transition-all duration-300 ${isFormActive ? "text-sm lg:text-base" : "text-base lg:text-lg"}`}
+                      className={`text-gray-600 transition-all duration-300 ${isFormActive ? "text-xs lg:text-base" : "text-sm lg:text-lg"}`}
                     >
                       {previewText || "How was your experience?"}
                     </p>
                   </motion.div>
 
-                  <div className="mb-8">
+                  <div className="mb-6 lg:mb-8">
                     <motion.div
-                      className="flex justify-center space-x-2 mb-6"
+                      className="flex justify-center space-x-1 lg:space-x-2 mb-4 lg:mb-6"
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ delay: 0.4 }}
@@ -626,7 +655,7 @@ export default function ReviewPageFixed() {
                           onClick={() => handleSetRating(star)}
                           onMouseEnter={() => setHoveredStar(star)}
                           onMouseLeave={() => setHoveredStar(0)}
-                          className={`p-2 lg:p-3 rounded-2xl transition-all duration-300 ${
+                          className={`p-1 lg:p-3 rounded-xl lg:rounded-2xl transition-all duration-300 ${
                             star <= (hoveredStar || rating)
                               ? "bg-gradient-to-r from-yellow-100 to-orange-100 shadow-lg"
                               : "hover:bg-gray-50"
@@ -638,7 +667,7 @@ export default function ReviewPageFixed() {
                           transition={{ delay: 0.5 + star * 0.1 }}
                         >
                           <Star
-                            className={`transition-all duration-300 ${isFormActive ? "h-6 w-6 lg:h-8 lg:w-8" : "h-8 w-8 lg:h-10 lg:w-10"} ${
+                            className={`transition-all duration-300 ${isFormActive ? "h-5 w-5 lg:h-8 lg:w-8" : "h-6 w-6 lg:h-10 lg:w-10"} ${
                               star <= (hoveredStar || rating)
                                 ? "fill-yellow-400 text-yellow-400 drop-shadow-sm"
                                 : "text-gray-300"
@@ -649,7 +678,7 @@ export default function ReviewPageFixed() {
                     </motion.div>
 
                     <motion.div
-                      className={`flex justify-between text-gray-500 mb-6 transition-all duration-300 ${isFormActive ? "text-xs lg:text-sm" : "text-xs lg:text-sm"}`}
+                      className={`flex justify-between text-gray-500 mb-4 lg:mb-6 transition-all duration-300 ${isFormActive ? "text-xs lg:text-sm" : "text-xs lg:text-sm"}`}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.8 }}
@@ -661,7 +690,7 @@ export default function ReviewPageFixed() {
                     <AnimatePresence>
                       {rating > 0 && (
                         <motion.div
-                          className={`mt-6 p-4 lg:p-6 rounded-2xl border-2 ${
+                          className={`mt-4 lg:mt-6 p-3 lg:p-6 rounded-xl lg:rounded-2xl border-2 ${
                             rating >= 4
                               ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
                               : "bg-gradient-to-r from-orange-50 to-red-50 border-orange-200"
@@ -672,7 +701,7 @@ export default function ReviewPageFixed() {
                           transition={{ duration: 0.4 }}
                         >
                           <p
-                            className={`text-gray-700 font-semibold text-center flex items-center justify-center transition-all duration-300 ${isFormActive ? "text-sm lg:text-base" : "text-base lg:text-lg"}`}
+                            className={`text-gray-700 font-semibold text-center flex items-center justify-center transition-all duration-300 ${isFormActive ? "text-xs lg:text-base" : "text-sm lg:text-lg"}`}
                           >
                             {rating >= 4 ? (
                               <>
@@ -682,7 +711,7 @@ export default function ReviewPageFixed() {
                                   transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                                 >
                                   <ThumbsUp
-                                    className={`mr-3 text-green-500 transition-all duration-300 ${isFormActive ? "h-4 w-4 lg:h-5 lg:w-5" : "h-5 w-5 lg:h-6 lg:w-6"}`}
+                                    className={`mr-2 lg:mr-3 text-green-500 transition-all duration-300 ${isFormActive ? "h-3 w-3 lg:h-5 lg:w-5" : "h-4 w-4 lg:h-6 lg:w-6"}`}
                                   />
                                 </motion.div>
                                 We're glad you enjoyed your experience!
@@ -695,7 +724,7 @@ export default function ReviewPageFixed() {
                                   transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                                 >
                                   <ThumbsDown
-                                    className={`mr-3 text-orange-500 transition-all duration-300 ${isFormActive ? "h-4 w-4 lg:h-5 lg:w-5" : "h-5 w-5 lg:h-6 lg:w-6"}`}
+                                    className={`mr-2 lg:mr-3 text-orange-500 transition-all duration-300 ${isFormActive ? "h-3 w-3 lg:h-5 lg:w-5" : "h-4 w-4 lg:h-6 lg:w-6"}`}
                                   />
                                 </motion.div>
                                 We're sorry to hear that. We'll use your feedback to improve.
@@ -708,45 +737,45 @@ export default function ReviewPageFixed() {
                   </div>
 
                   <AnimatePresence mode="wait">
-                    {/* Branch Selector - FIXED: Better display of branch name and location */}
+                    {/* Branch Selector */}
                     {showBranchSelector && (
                       <motion.div
                         key="branch-selector"
-                        className="mb-6 space-y-4"
+                        className="mb-4 lg:mb-6 space-y-3 lg:space-y-4"
                         initial={{ opacity: 0, x: 50 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -50 }}
                         transition={{ duration: 0.4 }}
                       >
-                        <div className="p-4 lg:p-6 rounded-2xl bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200">
-                          <p className="text-gray-700 font-semibold text-center mb-4 text-sm lg:text-base">
+                        <div className="p-2 lg:p-6 rounded-xl lg:rounded-2xl bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200">
+                          <p className="text-gray-700 font-semibold text-center mb-3 lg:mb-4 text-xs lg:text-base">
                             Please select your branch location:
                           </p>
                           {branches.length > 0 ? (
-                            <div className="space-y-3">
+                            <div className="space-y-2 lg:space-y-3">
                               {branches.map((branch, index) => (
                                 <motion.button
                                   key={index}
                                   onClick={() => handleBranchSelect(branch)}
-                                  className="w-full py-3 px-4 text-left rounded-xl border-2 border-gray-200 hover:bg-white hover:border-orange-300 hover:shadow-lg transition-all duration-300 bg-white/50 backdrop-blur-sm"
+                                  className="w-full py-2 lg:py-3 px-3 lg:px-4 text-left rounded-lg lg:rounded-xl border-2 border-gray-200 hover:bg-white hover:border-orange-300 hover:shadow-lg transition-all duration-300 bg-white/50 backdrop-blur-sm"
                                   initial={{ opacity: 0, y: 20 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   transition={{ delay: index * 0.1 }}
                                   whileHover={{ scale: 1.02 }}
                                   whileTap={{ scale: 0.98 }}
                                 >
-                                  <div className="font-semibold text-gray-800 text-sm lg:text-base">{branch.name}</div>
-                                  <div className="text-xs lg:text-sm text-gray-600 mt-1">{branch.location}</div>
+                                  <div className="font-semibold text-gray-800 text-xs lg:text-base">{branch.name}</div>
+                                  <div className="text-xs text-gray-600 mt-1">{branch.location}</div>
                                 </motion.button>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-center text-gray-500 text-sm">No branch locations available</p>
+                            <p className="text-center text-gray-500 text-xs lg:text-sm">No branch locations available</p>
                           )}
                         </div>
                         <motion.button
                           onClick={() => setShowBranchSelector(false)}
-                          className="w-full py-3 px-6 rounded-xl font-medium text-orange-600 border-2 border-orange-600 hover:bg-orange-50 transition-all duration-300 text-sm lg:text-base"
+                          className="w-full py-2 lg:py-3 px-6 rounded-xl font-medium text-orange-600 border-2 border-orange-600 hover:bg-orange-50 transition-all duration-300 text-xs lg:text-base"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -759,23 +788,23 @@ export default function ReviewPageFixed() {
                     {showGoogleForm && rating >= 4 && (
                       <motion.div
                         key="google-form"
-                        className="mb-6 space-y-4"
+                        className="mb-4 lg:mb-6 space-y-3 lg:space-y-4"
                         initial={{ opacity: 0, x: 50 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -50 }}
                         transition={{ duration: 0.4 }}
                       >
-                        <div className="p-4 lg:p-6 rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
+                        <div className="p-3 lg:p-6 rounded-xl lg:rounded-2xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
                           <div className="text-center">
                             <motion.div
-                              className="w-16 h-16 mx-auto bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center mb-4"
+                              className="w-12 h-12 lg:w-16 lg:h-16 mx-auto bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center mb-3 lg:mb-4"
                               initial={{ scale: 0, rotate: -180 }}
                               animate={{ scale: 1, rotate: 0 }}
                               transition={{ type: "spring", stiffness: 200 }}
                             >
-                              <Sparkles className="h-8 w-8 text-white" />
+                              <Sparkles className="h-5 w-5 lg:h-8 lg:w-8 text-white" />
                             </motion.div>
-                            <p className="text-green-700 font-semibold mb-3 text-sm lg:text-base">
+                            <p className="text-green-700 font-semibold mb-2 lg:mb-3 text-xs lg:text-base">
                               Fantastic! You'll be redirected to Google to leave your review.
                             </p>
                             <p className="text-green-600 text-xs lg:text-sm">
@@ -790,7 +819,7 @@ export default function ReviewPageFixed() {
                     {showForm && rating <= 3 && isReviewGatingEnabled && (
                       <motion.div
                         key="feedback-form"
-                        className="mb-6 space-y-4"
+                        className="mb-4 lg:mb-6 space-y-3 lg:space-y-4"
                         initial={{ opacity: 0, x: 50 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -50 }}
@@ -809,7 +838,7 @@ export default function ReviewPageFixed() {
                           >
                             <label
                               htmlFor={field.name}
-                              className="block text-xs lg:text-sm font-semibold text-gray-700 mb-2"
+                              className="block text-xs lg:text-sm font-semibold text-gray-700 mb-1 lg:mb-2"
                             >
                               {field.label} {field.required && <span className="text-red-500">*</span>}
                             </label>
@@ -819,7 +848,7 @@ export default function ReviewPageFixed() {
                               name={field.name}
                               value={formData[field.name as keyof typeof formData]}
                               onChange={handleInputChange}
-                              className={`w-full px-4 py-2.5 border-2 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all duration-300 text-xs lg:text-sm ${
+                              className={`w-full px-3 lg:px-4 py-2 lg:py-2.5 border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all duration-300 text-xs lg:text-sm ${
                                 formErrors[field.name as keyof typeof formErrors]
                                   ? "border-red-500 bg-red-50"
                                   : "border-gray-200 hover:border-gray-300"
@@ -828,7 +857,7 @@ export default function ReviewPageFixed() {
                             />
                             {formErrors[field.name as keyof typeof formErrors] && (
                               <motion.p
-                                className="mt-2 text-xs text-red-500 font-medium"
+                                className="mt-1 lg:mt-2 text-xs text-red-500 font-medium"
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
                               >
@@ -845,7 +874,7 @@ export default function ReviewPageFixed() {
                         >
                           <label
                             htmlFor="branchname"
-                            className="block text-xs lg:text-sm font-semibold text-gray-700 mb-2"
+                            className="block text-xs lg:text-sm font-semibold text-gray-700 mb-1 lg:mb-2"
                           >
                             Branch Location <span className="text-red-500">*</span>
                           </label>
@@ -854,7 +883,7 @@ export default function ReviewPageFixed() {
                             name="branchname"
                             value={formData.branchname}
                             onChange={handleInputChange}
-                            className={`w-full px-4 py-2.5 border-2 rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all duration-300 text-xs lg:text-sm ${
+                            className={`w-full px-3 lg:px-4 py-2 lg:py-2.5 border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition-all duration-300 text-xs lg:text-sm ${
                               formErrors.branchname
                                 ? "border-red-500 bg-red-50"
                                 : "border-gray-200 hover:border-gray-300"
@@ -990,7 +1019,7 @@ export default function ReviewPageFixed() {
                   >
                     Powered by{" "}
                     <span className="font-semibold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                      ReviewUplift
+                      Review Rhino
                     </span>
                   </motion.p>
                 </motion.div>
