@@ -270,7 +270,7 @@ export default function ReviewLinkPage() {
               reviewUrl = `http://localhost:8081/${slug}`
             }
             setReviewLinkUrl(reviewUrl)
-            setTempBusinessSlug(reviewUrl.replace("http://localhost:8081/", ""))
+            setTempBusinessSlug(reviewUrl.replace("https://reviewuplift.vercel.app/", ""))
           } else {
             const docRef = doc(db, "review_link", user.uid)
             const docSnap = await getDoc(docRef)
@@ -294,15 +294,15 @@ export default function ReviewLinkPage() {
               let reviewUrl = data.reviewLinkUrl
               if (!reviewUrl) {
                 const slug = finalBusinessName ? finalBusinessName.toLowerCase().replace(/\s+/g, "-") : "your-business"
-                reviewUrl = `http://localhost:8081/${slug}`
+                reviewUrl = `https://reviewuplift.vercel.app/${slug}`
               }
               setReviewLinkUrl(reviewUrl)
-              setTempBusinessSlug(reviewUrl.replace("http://localhost:8081/", ""))
+              setTempBusinessSlug(reviewUrl.replace("https://reviewuplift.vercel.app/", ""))
             } else {
               const slug = businessNameFromInfo
                 ? businessNameFromInfo.toLowerCase().replace(/\s+/g, "-")
                 : "your-business"
-              setReviewLinkUrl(`http://localhost:8081/${slug}`)
+              setReviewLinkUrl(`https://reviewuplift.vercel.app/${slug}`)
               setTempBusinessSlug(slug)
               setBusinessName(businessNameFromInfo || "")
               setTempBusinessName(businessNameFromInfo || "")
@@ -375,7 +375,7 @@ export default function ReviewLinkPage() {
   const handleUrlEdit = () => {
     if (isEditingUrl) {
       const newSlug = tempBusinessSlug.trim().toLowerCase().replace(/\s+/g, "-")
-      const newUrl = `http://localhost:8081/${newSlug}`
+      const newUrl = `https://reviewuplift.vercel.app/${newSlug}`
       setReviewLinkUrl(newUrl)
       setTempBusinessSlug(newSlug)
 
@@ -765,7 +765,7 @@ export default function ReviewLinkPage() {
                   {isEditingUrl ? (
                     <div className="space-y-4">
                       <div className="flex items-center">
-                        <span className="whitespace-nowrap mr-2 text-gray-600 font-medium">http://localhost:8081/</span>
+                        <span className="whitespace-nowrap mr-2 text-gray-600 font-medium">https://reviewuplift.vercel.app/</span>
                         <Input
                           value={tempBusinessSlug}
                           onChange={(e) => setTempBusinessSlug(e.target.value)}
