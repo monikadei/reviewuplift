@@ -93,7 +93,7 @@ export default function ReviewPageFixed() {
         querySnapshot.forEach((docSnap) => {
           const data = docSnap.data()
           const slug =
-            data.reviewLinkUrl?.split("https://go.reviewuplift.com/")[1] || data.reviewLinkUrl?.split("/").pop()
+            data.reviewLinkUrl?.split("https://reviewuplift.vercel.app/")[1] || data.reviewLinkUrl?.split("/").pop()
           if (slug === businessSlug) {
             matchedDoc = { id: docSnap.id, ...data }
           }
